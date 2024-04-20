@@ -1,0 +1,108 @@
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+import numpy as np
+import cv2
+import os
+from os import listdir, walk
+from os.path import isfile, join
+
+def get_image_data_from_wc():
+    all_user_image = [x[0] for x in os.walk('data')]
+
+    if all_user_image[0] == 'data':
+        all_user_image.pop()
+
+    id = len(all_user_image) + 1
+
+    cap = cv2.VideoCapture(0)  # Mở webcam
+    user_id = input("Nhập tên người dùng: ")  # ID để gán nhãn dữ liệu
+    user_id = user_id + "_" + str(id)
+    images_path = f"data/{user_id}"  # Thư mục lưu trữ ảnh
+    os.makedirs(images_path, exist_ok=True)
+
+    count = 0
+    while True:
+        _, frame = cap.read()
+        cv2.imshow("Capture", frame)
+        key = cv2.waitKey(1)
+
+        if key == ord('c'):  # Nhấn 'c' để chụp ảnh
+            img_name = f"{images_path}/{count}.jpg"
+            cv2.imwrite(img_name, frame)
+            print(f"Ảnh {img_name} đã được lưu.")
+            count += 1
+
+        elif key == ord('q'):  # Nhấn 'q' để thoát
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+def preprocess_image(image_path):
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+     # Tải Haar Cascade để phát hiện khuôn mặt
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    
+    # Phát hiện khuôn mặt trong ảnh
+    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+
+    # Nếu có khuôn mặt được phát hiện, cắt khuôn mặt đầu tiên
+    if len(faces) > 0:
+        x, y, w, h = faces[0]
+        face = gray[y:y+h, x:x+w]
+        return face
+    else:
+        # Nếu không tìm thấy khuôn mặt, trả về ảnh gốc hoặc có thể trả về None
+        return gray
+    
+    return gray
+
+
+def preprocess_data_and_label():
+    data = []
+    labels = []    
+
+    dataset = 'data'
+    all_user_folder_data = [x[0] for x in os.walk(dataset)]
+    if all_user_folder_data[0] == 'data':
+        all_user_folder_data.pop(0)
+    print(all_user_folder_data)
+
+    for folder in all_user_folder_data:
+        folder_name = folder.split('/')
+        folder_name = folder_name[len(folder_name) - 1]
+
+        id = folder_name.split('_')
+        id = id[len(id) - 1]
+
+        onlyfiles = [f for f in listdir(folder) if isfile(join(folder, f))]
+        for file in onlyfiles:
+            image_path = folder + '/' + file
+            processed_image = preprocess_image(image_path=image_path)
+            if processed_image is not None:
+                # Làm phẳng hình ảnh để tạo mảng 1D
+                flattened_image = processed_image.flatten()
+                data.append(flattened_image)
+                labels.append(id)
+    
+    return np.array(data, dtype=object), labels
+
+def train_model():
+    data, labels = preprocess_data_and_label()
+    data.reshape(1, -1)
+    # `data` là mảng Numpy của các hình ảnh đã được xử lý, và `labels` là nhãn tương ứng
+    X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2)
+
+    print(labels)
+    model = KNeighborsClassifier()
+    model.fit(X_train, y_train)
+
+    accuracy = model.score(X_test, y_test)
+    print(f"Độ chính xác của mô hình: {accuracy * 100:.2f}%")
+
+
+
+
+train_model()

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Webcam Image Upload</title>
+</head>
+<body>
+    <h1>Upload Image from Webcam</h1>
+    <video id="webcam" autoplay playsinline width="640" height="480"></video>
+    <button id="snap">Chụp Ảnh</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var video = document.getElementById('webcam');
+            var canvas = document.getElementById('canvas');
+            var snap = document.getElementById('snap');
+            var context = canvas.getContext('2d');
+            var streaming = false;
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function(err) {
+                    console.log("An error occurred: " + err);
+                });
+
+            video.addEventListener('canplay', function() {
+                if (!streaming) {
+                    streaming = true;
+                }
+            }, false);
+
+            snap.addEventListener('click', function() {
+                context.drawImage(video, 0, 0, 640, 480);
+                var dataUrl = canvas.toDataURL('image/png');
+                uploadImage(dataUrl); // Hàm để gửi ảnh đến server
+            });
+
+            function uploadImage(imageData) {
+                // Hàm này gửi dữ liệu ảnh đến server
+                // Bạn cần thêm logic để gửi ảnh đến Flask server
+                console.log('Ảnh đã chụp:', imageData);
+                fetch('/upload-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: imageData })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Kết quả nhận diện:', data);
+                    // Xử lý dữ liệu nhận về
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                });
+
+            }
+        });
+
+    </script>
+</body>
+</html>

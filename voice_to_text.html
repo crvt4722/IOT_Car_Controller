@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech to Text in Vietnamese</title>
+</head>
+<body>
+    <button id="start-btn">Start Listening</button>
+    <p id="transcript"></p>
+
+    <script>
+        // Check if the browser supports the Web Speech API
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Your browser does not support speech recognition. Please try Chrome.");
+        } else {
+            // Initialize webkitSpeechRecognition
+            var recognition = new webkitSpeechRecognition();
+            recognition.lang = 'vi-VN'; // Set the language to Vietnamese
+
+            // Handle the results of the recognition
+            recognition.onresult = function(event) {
+                var transcript = event.results[0][0].transcript;
+                document.getElementById('transcript').textContent = transcript;
+
+                let xhr = new XMLHttpRequest()
+                xhr.open('POST', 'http://127.0.0.1:5000/controll', true)
+                xhr.setRequestHeader('Content-Type', 'application/json')
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                      console.log(xhr.responseText)
+                    }
+                  };
+                                  
+                xhr.send(JSON.stringify({"speech":transcript}))
+                
+            };
+
+            // Handle errors
+            recognition.onerror = function(event) {
+                console.error("Speech recognition error", event);
+            };
+
+            // Start recognition
+            document.getElementById('start-btn').addEventListener('click', function() {
+                recognition.start();
+            });
+        }
+    </script>
+</body>
+</html>
